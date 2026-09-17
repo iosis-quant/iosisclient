@@ -73,6 +73,9 @@ def build_parser() -> argparse.ArgumentParser:
     # datasets
     sub.add_parser("datasets", help="List cloud datasets")
 
+    # credits
+    sub.add_parser("credits", help="Show remaining credits")
+
     # status
     stat_p = sub.add_parser("status", help="Check cloud run status")
     stat_p.add_argument("run_id", help="Run ID to check")
@@ -118,6 +121,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "datasets":
         from iosisclient.commands.datasets import datasets
         return datasets(args, config)
+
+    if args.command == "credits":
+        from iosisclient.commands.credits import credits
+        return credits(args, config)
 
     if args.command == "status":
         from iosisclient.commands.status import status

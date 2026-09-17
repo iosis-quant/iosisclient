@@ -143,6 +143,21 @@ Each entry includes the operation name, version, category, parameters, and input
 
 ---
 
+## Credits
+
+### `get_credits()`
+
+Get the remaining credit balance for the current month:
+
+```python
+credits = client.get_credits()
+# {"credits": {"granted": 100, "total": 100, "consumedMs": 78000, "consumedCredits": 13, "remaining": 87}}
+```
+
+**Endpoint:** `GET /api/credits`
+
+---
+
 ## Graph Rendering
 
 ### `render_graph(yaml)`
@@ -214,6 +229,7 @@ iosis run cloud <strategy.yaml> [-d ./artifacts]
 iosis validate <strategy.yaml>
 iosis catalog [local|cloud]
 iosis datasets
+iosis credits
 iosis status <run_id>
 iosis render <strategy.yaml> [-o graph.svg]
 iosis cache info

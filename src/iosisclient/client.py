@@ -208,6 +208,9 @@ class IosisClient:
     def list_tsfns(self) -> Any:
         return self._get("/api/tsfns")
 
+    def get_credits(self) -> Any:
+        return self._get("/api/credits")
+
     def get_strategy_schema(self) -> Any:
         return self._get("/api/schema/strategy")
 
