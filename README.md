@@ -158,6 +158,31 @@ credits = client.get_credits()
 
 ---
 
+## Versions
+
+### `get_version_status()`
+
+Check installed versions against the oldest versions the API supports (no
+API key required). The comparison happens locally:
+
+```python
+status = client.get_version_status()
+# {"versions": {"iosisclient": {"installed": "2.2.2", "minSupported": "2.2.2", "supported": True}, ...}, "supported": True}
+```
+
+Helpers `local_package_versions()` (installed versions via pip/uv metadata),
+`pypi_latest_versions()` (latest releases from PyPI), and
+`version_supported(installed, minimum)` back the `iosis version` CLI command,
+which exits non-zero when unsupported:
+
+```bash
+iosis version
+```
+
+**Endpoint:** `GET /api/versions` (no auth; returns e.g. `{"iosisclient": "2.2.2", "iosislib": "0.4.6"}`)
+
+---
+
 ## Graph Rendering
 
 ### `render_graph(yaml)`
@@ -230,6 +255,7 @@ iosis validate <strategy.yaml>
 iosis catalog [local|cloud]
 iosis datasets
 iosis credits
+iosis version
 iosis status <run_id>
 iosis render <strategy.yaml> [-o graph.svg]
 iosis cache info

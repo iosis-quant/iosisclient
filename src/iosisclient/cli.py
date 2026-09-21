@@ -76,6 +76,9 @@ def build_parser() -> argparse.ArgumentParser:
     # credits
     sub.add_parser("credits", help="Show remaining credits")
 
+    # version
+    sub.add_parser("version", help="Check installed versions against the API")
+
     # status
     stat_p = sub.add_parser("status", help="Check cloud run status")
     stat_p.add_argument("run_id", help="Run ID to check")
@@ -125,6 +128,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "credits":
         from iosisclient.commands.credits import credits
         return credits(args, config)
+
+    if args.command == "version":
+        from iosisclient.commands.version import version
+        return version(args, config)
 
     if args.command == "status":
         from iosisclient.commands.status import status

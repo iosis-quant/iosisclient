@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import importlib.metadata
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -83,6 +85,97 @@ def _check_api_key(api_key: str | None) -> str:
             "No API key. Pass api_key= or set IOSIS_API_KEY."
         )
     return api_key
+
+
+VERSIONED_PACKAGES = ("iosisclient", "iosislib")
+
+
+def local_package_versions() -> dict[str, str | None]:
+    """Installed versions of iosisclient/iosislib (None when not installed).
+
+    Reads pip-installed distribution metadata from the standard library, so
+    this works whether the packages were installed with pip or uv.
+    """
+    versions: dict[str, str | None] = {}
+    for package in VERSIONED_PACKAGES:
+        try:
+            versions[package] = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:
+            versions[package] = None
+    return versions
+
+
+def pypi_latest_versions(timeout: float = 10) -> dict[str, str | None]:
+    """Latest released versions from the PyPI JSON API (None on failure).
+
+    This is the same index pip/uv consult, queried over stdlib HTTP so the
+    client stays dependency-free.
+    """
+    latest: dict[str, str | None] = {}
+    for package in VERSIONED_PACKAGES:
+        try:
+            req = urllib.request.Request(
+                f"https://pypi.org/pypi/{package}/json",
+                headers={"Accept": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                info = json.loads(resp.read()).get("info", {})
+                version = info.get("version")
+                latest[package] = version if isinstance(version, str) else None
+        except Exception:
+            latest[package] = None
+    return latest
+
+
+def fetch_version_status(
+    base_url: str | None = None,
+    timeout: float = 30,
+) -> Any:
+    """Oldest client/library versions compatible with the API.
+
+    Bare GET, no API key required. Returns e.g.
+    ``{"iosisclient": "2.2.2", "iosislib": "0.4.6"}``.
+    """
+    url = f"{(base_url or os.environ.get('IOSIS_BASE_URL') or 'https://iosis.dev').rstrip('/')}/api/versions"
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = json.loads(e.read())
+        except Exception:
+            err_body = {"error": "http_error", "message": str(e)}
+        raise IosisError(e.code, err_body) from None
+    except (urllib.error.URLError, OSError) as e:
+        raise IosisError(
+            0, {"error": "network_error", "message": str(e)}
+        ) from None
+
+
+def _parse_version(value: str) -> tuple[tuple[int, int, int], bool] | None:
+    """Split a version into ((major, minor, patch), is_release)."""
+    core = re.split(r"[-+]", value.strip(), maxsplit=1)
+    parts = core[0].split(".")
+    if len(parts) != 3 or not all(part.isdigit() for part in parts):
+        return None
+    return ((int(parts[0]), int(parts[1]), int(parts[2])), len(core) == 1)
+
+
+def version_supported(installed: str | None, minimum: str | None) -> bool | None:
+    """True when installed meets the minimum; None when either is unknown.
+
+    Releases sort above pre-releases of the same core version.
+    """
+    if not installed or not minimum:
+        return None
+    have = _parse_version(installed)
+    floor = _parse_version(minimum)
+    if have is None or floor is None:
+        return None
+    if have[0] != floor[0]:
+        return have[0] > floor[0]
+    return have[1] >= floor[1]
 
 
 class IosisClient:
@@ -210,6 +303,36 @@ class IosisClient:
 
     def get_credits(self) -> Any:
         return self._get("/api/credits")
+
+    def get_version_status(self) -> dict[str, Any]:
+        """Check installed versions against the server's minimums, locally.
+
+        Returns per-package {installed, minSupported, supported} plus an
+        overall `supported` flag (False when any installed version is below
+        its floor, or when the minimums could not be fetched).
+        """
+        try:
+            minimums = fetch_version_status(self.base_url)
+        except IosisError:
+            minimums = {}
+        if not isinstance(minimums, dict):
+            minimums = {}
+        installed = local_package_versions()
+        versions: dict[str, Any] = {}
+        for package in VERSIONED_PACKAGES:
+            have = installed.get(package)
+            floor = minimums.get(package)
+            floor_str = floor if isinstance(floor, str) else None
+            support = version_supported(have, floor_str) if floor_str else None
+            versions[package] = {
+                "installed": have,
+                "minSupported": floor_str,
+                "supported": support,
+            }
+        return {
+            "versions": versions,
+            "supported": all(entry["supported"] is True for entry in versions.values()),
+        }
 
     def get_strategy_schema(self) -> Any:
         return self._get("/api/schema/strategy")
