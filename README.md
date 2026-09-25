@@ -41,7 +41,7 @@ run = client.submit_run("strategy.yaml")
 # {"id": "8f3c...", "status": "queued"}
 ```
 
-Auto-generates an idempotency key (UUID) per call. Pass `idempotency_key=` to reuse one and avoid duplicate runs on retry.
+Auto-generates an idempotency key (UUID) per call. Pass `idempotency_key=` to reuse one when retrying the same YAML (the same key with different YAML returns 409 `idempotency_conflict`).
 
 **Endpoint:** `POST /api/runs` (Content-Type: `application/yaml`)
 
