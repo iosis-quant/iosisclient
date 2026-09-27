@@ -373,6 +373,8 @@ class IosisClient:
 
             if kind == "result":
                 filename = "result.parquet"
+            elif kind == "output":
+                filename = name if name.endswith(".parquet") else f"{name}.parquet"
             elif kind == "chart":
                 if chart_names is not None and name not in chart_names:
                     continue

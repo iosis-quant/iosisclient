@@ -224,14 +224,17 @@ schema = client.get_strategy_schema()
 
 ### `download_artifacts(run_id, dest_dir, chart_names=None)`
 
-Download result and chart artifacts for a completed run:
+Download result, per-output, and chart artifacts for a completed run:
 
 ```python
 paths = client.download_artifacts("8f3c...", "./output")
-# [PosixPath('output/result.parquet'), PosixPath('output/chart.close.svg')]
+# [PosixPath('output/result.parquet'),
+#  PosixPath('output/output.zscore.parquet'),
+#  PosixPath('output/chart.close.svg')]
 ```
 
-Optional `chart_names` filter limits which charts to download.
+`result.parquet` is the alphabetically-first declared output; each declared output is also
+downloaded as `output.<name>.parquet`. Optional `chart_names` limits which charts to download.
 
 ### `download_charts(run_id, dest_dir)`
 
